@@ -165,19 +165,25 @@ io.on("connection", socket => {
       const userId = decoded.id;
       connectedUsers[userId] = socket.id;
 
+      const updateQuery = `UPDATE users SET is_online = 1 WHERE id = ?`;
+      await db.query(updateQuery, [userId]);
+      console.log(`Statut mis à jour pour l'utilisateur ${userId}: en ligne`);
+
       // Récupérer le username de l'utilisateur connecté
       const userInfoQuery = `SELECT id, username FROM users WHERE id = ?`;
       const [userInfo] = await db.query(userInfoQuery, [userId]);
 
       if (userInfo.length > 0) {
         const user = userInfo[0];
-        console.log(`Utilisateur connecté: ${user.username}`);
+        console.log(`Utilisateur connecté assdasdasd: ${user.username}`);
 
         // Associer le username au socket
         socket.username = user.username;
+        socket.emit("userInfo", { username: user.username });
+        console.log("Envoi des informations de l'utilisateur");
 
         // Envoyer la liste des utilisateurs connectés
-        const query = `SELECT id, username, is_online FROM users`;
+        const query = `SELECT id, username, is_online FROM users ORDER BY is_online DESC, username ASC`;
         const [results] = await db.query(query);
         io.emit("userList", results);
       }
@@ -207,9 +213,8 @@ io.on("connection", socket => {
         );
 
         delete connectedUsers[userId];
-        const query = `SELECT id, username, is_online FROM users`;
+        const query = `SELECT id, username, is_online FROM users ORDER BY is_online DESC, username ASC`;
         const [results] = await db.query(query);
-
         io.emit("userList", results);
       } catch (err) {
         console.error(
