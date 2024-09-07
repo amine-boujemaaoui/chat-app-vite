@@ -7,8 +7,8 @@ interface Message {
 }
 
 interface MessageListProps {
-    messages: Array<Message>;
-    username: string | null;
+  messages: Array<Message>;
+  username: string | null;
 }
 
 const MessageList = ({ messages, username }: MessageListProps) => {
@@ -23,7 +23,7 @@ const MessageList = ({ messages, username }: MessageListProps) => {
   return (
     <div className='w-[500px] mx-auto mt-10'>
       <h2 className='text-xl font-bold mb-4'>
-        Connécté en tant que: {username}
+        {username ? `Connecté en tant que: ${username}` : "Chat privé"}
       </h2>
       <ScrollArea className='h-[300px] border rounded mb-4 p-4'>
         {messages.length > 0 ? (

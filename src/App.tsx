@@ -8,6 +8,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Chat from "./pages/Chat";
 import PrivateRoute from "./components/PrivateRoute";
+import PrivateChat from "./pages/PrivateChat";
 
 function App() {
   return (
@@ -35,6 +36,14 @@ function App() {
 
           {/* Si l'URL ne correspond à aucune route, rediriger vers /login */}
           <Route path='*' element={<Navigate to='/login' />} />
+          <Route
+            path='/private-chat/:friendId'
+            element={
+              <PrivateRoute>
+                <PrivateChat />
+              </PrivateRoute>
+            }
+          />
         </Routes>
       </div>
     </Router>

@@ -33,7 +33,24 @@ const Chat = () => {
 
       setSocket(newSocket);
 
+      // Limiter à un seul appel
       newSocket.emit("join", token);
+
+      newSocket.on("oldMessages", oldMessages => {
+        setMessages(
+          oldMessages.map((msg: Message) => ({
+            from: msg.from,
+            message: msg.message,
+          }))
+        );
+      });
+
+      // Nettoyer les anciens événements avant de les rattacher
+      newSocket.off("userInfo");
+      newSocket.off("newMessage");
+      newSocket.off("userList");
+      newSocket.off("friendsList");
+      newSocket.off("updateFriendsList");
 
       newSocket.on("userInfo", (data: { username: string }) => {
         setUsername(data.username);
@@ -51,16 +68,15 @@ const Chat = () => {
         setFriends(friendsList);
       });
 
-      // Mettre à jour la liste d'amis en temps réel
       newSocket.on("updateFriendsList", (friendsList: Array<User>) => {
         setFriends(friendsList);
       });
 
       return () => {
-        newSocket.disconnect();
+        newSocket.disconnect(); // S'assurer de déconnecter le socket lors du démontage du composant
       };
     }
-  }, [token]);
+  }, [token]); // L'effet est appelé uniquement lorsque `token` change
 
   const sendMessage = () => {
     if (!username) {

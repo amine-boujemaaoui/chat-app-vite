@@ -169,46 +169,113 @@ app.get("/friends", authenticateToken, async (req, res) => {
 
 io.on("connection", socket => {
   socket.on("join", async token => {
-    try {
-      const decoded = jwt.verify(token, "secretkey");
-      const userId = decoded.id;
-      connectedUsers[userId] = socket.id;
+    if (!socket.joined) {
+      // Assurez-vous qu'il ne rejoint qu'une seule fois
+      socket.joined = true;
+      try {
+        const decoded = jwt.verify(token, "secretkey");
+        const userId = decoded.id;
+        connectedUsers[userId] = socket.id;
+        socket.userId = userId;
 
-      const updateQuery = `UPDATE users SET is_online = 1 WHERE id = ?`;
-      await db.query(updateQuery, [userId]);
-      console.log(`Statut mis à jour pour l'utilisateur ${userId}: en ligne`);
+        const query = `SELECT u.username, m.message, m.created_at FROM messages m
+                 JOIN users u ON m.from_user_id = u.id
+                 WHERE m.room_name = 'global'
+                 ORDER BY m.created_at ASC`;
+        const [messages] = await db.query(query);
+        socket.emit("oldMessages", messages);
 
-      // Récupérer le username de l'utilisateur connecté
-      const userInfoQuery = `SELECT id, username FROM users WHERE id = ?`;
-      const [userInfo] = await db.query(userInfoQuery, [userId]);
+        const updateQuery = `UPDATE users SET is_online = 1 WHERE id = ?`;
+        await db.query(updateQuery, [userId]);
 
-      const friendsQuery = `SELECT id, username, is_online FROM users WHERE id IN (SELECT friend_id FROM friends WHERE user_id = ? ORDER BY is_online DESC, username ASC)`;
-      const [friendsList] = await db.query(friendsQuery, [userId]);
+        // Récupérer le username de l'utilisateur connecté
+        const userInfoQuery = `SELECT id, username FROM users WHERE id = ?`;
+        const [userInfo] = await db.query(userInfoQuery, [userId]);
 
-      // Envoyer la liste des amis à l'utilisateur connecté
-      socket.emit("friendsList", friendsList);
+        const friendsQuery = `SELECT id, username, is_online FROM users WHERE id IN (SELECT friend_id FROM friends WHERE user_id = ? ORDER BY is_online DESC, username ASC)`;
+        const [friendsList] = await db.query(friendsQuery, [userId]);
 
-      if (userInfo.length > 0) {
-        const user = userInfo[0];
-        console.log(`Utilisateur connecté assdasdasd: ${user.username}`);
+        // Envoyer la liste des amis à l'utilisateur connecté
+        console.log(`Statut mis à jour pour l'utilisateur ${userId}: en ligne`);
+        socket.emit("friendsList", friendsList);
 
-        // Associer le username au socket
-        socket.username = user.username;
-        socket.emit("userInfo", { username: user.username });
-        console.log("Envoi des informations de l'utilisateur");
+        if (userInfo.length > 0) {
+          const user = userInfo[0];
+          console.log(`Utilisateur connecté: ${user.username}`);
+          socket.username = user.username;
+          socket.emit("userInfo", { username: user.username });
+          console.log("Envoi des informations de l'utilisateur");
 
-        // Envoyer la liste des utilisateurs connectés
-        const query = `SELECT id, username, is_online FROM users ORDER BY is_online DESC, username ASC`;
-        const [results] = await db.query(query);
-        io.emit("userList", results);
+          // Envoyer la liste des utilisateurs connectés
+          const query = `SELECT id, username, is_online FROM users ORDER BY is_online DESC, username ASC`;
+          const [results] = await db.query(query);
+          io.emit("userList", results);
+        }
+      } catch (error) {
+        console.error("Erreur d'authentification:", error);
       }
-    } catch (error) {
-      console.error("Erreur d'authentification:", error);
     }
   });
 
-  socket.on("sendMessage", data => {
+  socket.on("joinPrivateChat", async ({ friendId, token }) => {
+    try {
+      const decoded = jwt.verify(token, "secretkey");
+      const userId = decoded.id;
+      socket.userId = userId;
+
+      const roomName = [userId, friendId].sort().join("_");
+      const query = `SELECT u.username, m.message, m.created_at FROM messages m
+                 JOIN users u ON m.from_user_id = u.id
+                 WHERE m.room_name = ?
+                 ORDER BY m.created_at ASC`;
+      const [messages] = await db.query(query, [roomName]);
+      socket.emit("oldPrivateMessages", messages);
+      socket.join(roomName);
+
+      // Récupérer le nom d'utilisateur de l'utilisateur connecté
+      const userInfoQuery = `SELECT id, username FROM users WHERE id = ?`;
+      const [userInfo] = await db.query(userInfoQuery, [userId]);
+
+      if (userInfo.length > 0) {
+        const user = userInfo[0];
+        socket.username = user.username;
+
+        // Envoyer une confirmation à l'utilisateur qu'il a rejoint la salle privée
+        socket.emit("privateChatJoined", {
+          roomName,
+          friendId,
+          username: socket.username,
+        });
+
+        console.log(
+          `Utilisateur ${socket.username} a rejoint la salle privée ${roomName}`
+        );
+      }
+    } catch (error) {
+      console.error("Erreur lors de l'entrée dans la salle privée:", error);
+    }
+  });
+
+  socket.on("sendPrivateMessage", async ({ message, to }) => {
+    const roomName = [socket.userId, to].sort().join("_"); // Crée le même nom de salle pour envoyer le message
+    const query = `INSERT INTO messages (from_user_id, to_user_id, message, room_name) VALUES (?, ?, ?, ?)`;
+    await db.query(query, [socket.userId, to, message, roomName]);
+    console.log(
+      `(userId: ${socket.userId}, to: ${to}) Envoie du message: ${message} à la salle privée ${roomName}`
+    );
+    io.to(roomName).emit("newPrivateMessage", {
+      from: socket.username,
+      message: message,
+    });
+  });
+
+  socket.on("sendMessage", async data => {
     console.log("Message reçu du client:", data);
+    const { message, from } = data;
+
+    // Enregistrer le message dans la base de données
+    const query = `INSERT INTO messages (from_user_id, message, room_name) VALUES (?, ?, ?)`;
+    await db.query(query, [socket.userId, message, "global"]);
     io.emit("newMessage", data);
   });
 
