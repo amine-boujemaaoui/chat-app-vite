@@ -3,6 +3,7 @@ import { io, Socket } from "socket.io-client";
 import MessageList from "../components/MessageList";
 import UserList from "../components/UserList";
 import MessageInput from "../components/MessageInput";
+import FriendList from "../components/FriendList";
 
 interface User {
   id: number;
@@ -20,6 +21,7 @@ const Chat = () => {
   const [message, setMessage] = useState<string>("");
   const [messages, setMessages] = useState<Array<Message>>([]);
   const [users, setUsers] = useState<Array<User>>([]);
+  const [friends, setFriends] = useState<Array<User>>([]); // Liste des amis
   const [username, setUsername] = useState<string | null>(null);
   const token = localStorage.getItem("jwt");
 
@@ -45,6 +47,15 @@ const Chat = () => {
         setUsers(userList);
       });
 
+      newSocket.on("friendsList", (friendsList: Array<User>) => {
+        setFriends(friendsList);
+      });
+
+      // Mettre à jour la liste d'amis en temps réel
+      newSocket.on("updateFriendsList", (friendsList: Array<User>) => {
+        setFriends(friendsList);
+      });
+
       return () => {
         newSocket.disconnect();
       };
@@ -65,15 +76,16 @@ const Chat = () => {
 
   return (
     <div className='flex'>
-      <div className="mx-auto">
-        <MessageList messages={messages} />
+      <div className='mx-auto'>
+        <MessageList messages={messages} username={username} />
         <MessageInput
           message={message}
           setMessage={setMessage}
           sendMessage={sendMessage}
         />
       </div>
-      <UserList users={users} />
+      <UserList users={users} username={username} />
+      <FriendList friends={friends} /> {/* Liste des amis */}
     </div>
   );
 };

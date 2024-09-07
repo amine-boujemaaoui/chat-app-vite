@@ -112,6 +112,13 @@ app.post("/add-friend", async (req, res) => {
       const addFriendQuery = `INSERT INTO friends (user_id, friend_id) VALUES (?, ?), (?, ?)`;
       await db.query(addFriendQuery, [userId, friendId, friendId, userId]);
 
+      // Envoyer un événement socket à l'utilisateur pour mettre à jour la liste des amis
+      const friendsQuery = `SELECT id, username FROM users WHERE id IN (SELECT friend_id FROM friends WHERE user_id = ?)`;
+      const [friendsList] = await db.query(friendsQuery, [userId]);
+
+      // Notifier l'utilisateur que sa liste d'amis a été mise à jour
+      io.to(connectedUsers[userId]).emit("updateFriendsList", friendsList);
+
       res.json({ message: "Ami ajouté avec succès" });
     } catch (error) {
       console.error("Erreur lors de l'ajout de l'ami:", error);
@@ -127,35 +134,37 @@ function authenticateToken(req, res, next) {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
 
-  if (!token) return res.sendStatus(401);
+  if (!token) {
+    return res.status(401).json({ message: "Token manquant" });
+  }
 
   jwt.verify(token, "secretkey", (err, user) => {
-    if (err) return res.sendStatus(403);
-    req.user = user;
-    next();
+    if (err) {
+      console.error("Erreur de vérification du token:", err);
+      return res.status(403).json({ message: "Token invalide" });
+    }
+    req.user = user; // On attache l'utilisateur décodé à la requête
+    next(); // On passe au middleware ou route suivant
   });
 }
 
-app.get("/me", authenticateToken, (req, res) => {
-  console.log("Utilisateur authentifié:", req.user);
-
+app.get("/friends", authenticateToken, async (req, res) => {
   const userId = req.user.id;
-  const query = "SELECT username FROM users WHERE id = ?";
 
-  db.query(query, [userId], (err, results) => {
-    if (err) {
-      console.error("Erreur lors de la requête :", err);
-      return res.sendStatus(500);
-    }
-    console.log("Résultats de la requête :", results);
+  try {
+    const query = `
+      SELECT u.id, u.username, u.is_online 
+      FROM friends f
+      JOIN users u ON u.id = f.friend_id
+      WHERE f.user_id = ?
+    `;
+    const [friends] = await db.query(query, [userId]);
 
-    if (results.length > 0) {
-      const username = results[0].username;
-      res.json({ username });
-    } else {
-      res.status(404).json({ message: "Utilisateur non trouvé" });
-    }
-  });
+    res.json(friends);
+  } catch (err) {
+    console.error("Erreur lors de la récupération des amis:", err);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
 });
 
 io.on("connection", socket => {
@@ -172,6 +181,12 @@ io.on("connection", socket => {
       // Récupérer le username de l'utilisateur connecté
       const userInfoQuery = `SELECT id, username FROM users WHERE id = ?`;
       const [userInfo] = await db.query(userInfoQuery, [userId]);
+
+      const friendsQuery = `SELECT id, username, is_online FROM users WHERE id IN (SELECT friend_id FROM friends WHERE user_id = ? ORDER BY is_online DESC, username ASC)`;
+      const [friendsList] = await db.query(friendsQuery, [userId]);
+
+      // Envoyer la liste des amis à l'utilisateur connecté
+      socket.emit("friendsList", friendsList);
 
       if (userInfo.length > 0) {
         const user = userInfo[0];
@@ -195,6 +210,37 @@ io.on("connection", socket => {
   socket.on("sendMessage", data => {
     console.log("Message reçu du client:", data);
     io.emit("newMessage", data);
+  });
+
+  socket.on("friendRequest", async ({ token, friendId }) => {
+    try {
+      const decoded = jwt.verify(token, "secretkey");
+      const userId = decoded.id;
+
+      // Envoie une notification à l'utilisateur
+      const notifyUserQuery = `SELECT socket_id FROM users WHERE id = ?`;
+      const [friendSocket] = await db.query(notifyUserQuery, [friendId]);
+
+      if (friendSocket.length > 0) {
+        io.to(friendSocket[0].socket_id).emit("friendRequestReceived", {
+          from: userId,
+        });
+      }
+    } catch (error) {
+      console.error("Erreur lors de l'envoi de la demande d'ami:", error);
+    }
+  });
+
+  socket.on("friendRequestAccepted", async ({ token, friendId }) => {
+    try {
+      const decoded = jwt.verify(token, "secretkey");
+      const userId = decoded.id;
+
+      // Notifie les deux utilisateurs que la demande a été acceptée
+      io.to(socket.id).emit("friendAccepted", { friendId });
+    } catch (error) {
+      console.error("Erreur lors de l'acceptation de la demande d'ami:", error);
+    }
   });
 
   socket.on("disconnect", async () => {
