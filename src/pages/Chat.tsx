@@ -1,19 +1,15 @@
 import { useEffect, useState } from "react";
 import { io, Socket } from "socket.io-client";
-import MessageList from "../components/MessageList";
-import UserList from "../components/UserList";
-import MessageInput from "../components/MessageInput";
-import FriendList from "../components/FriendList";
+import MessageList from "@/components/MessageList";
+import UserList from "@/components/UserList";
+import MessageInput from "@/components/MessageInput";
+import FriendList from "@/components/FriendList";
+import { Message } from "@/types/Message";
 
 interface User {
   id: number;
   username: string;
   is_online: boolean;
-}
-
-interface Message {
-  from: string;
-  message: string;
 }
 
 const Chat = () => {
@@ -38,8 +34,8 @@ const Chat = () => {
 
       newSocket.on("oldMessages", oldMessages => {
         setMessages(
-          oldMessages.map((msg: Message) => ({
-            from: msg.from,
+          oldMessages.map((msg: { username: string; message: string }) => ({
+            from: msg.username,
             message: msg.message,
           }))
         );

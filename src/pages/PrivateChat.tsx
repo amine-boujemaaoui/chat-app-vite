@@ -1,5 +1,6 @@
 import MessageInput from "@/components/MessageInput";
 import MessageList from "@/components/MessageList";
+import { Message } from "@/types/Message";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { io, Socket } from "socket.io-client";
@@ -9,9 +10,7 @@ const PrivateChat = () => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [message, setMessage] = useState<string>("");
   const [username, setUsername] = useState<string | null>(null);
-  const [messages, setMessages] = useState<
-    Array<{ from: string; message: string }>
-  >([]);
+  const [messages, setMessages] = useState<Array<Message>>([]);
   const token = localStorage.getItem("jwt");
 
   useEffect(() => {
@@ -44,8 +43,12 @@ const PrivateChat = () => {
 
       newSocket.on(
         "newPrivateMessage",
-        (data: { from: string; message: string }) => {
-          setMessages(prevMessages => [...prevMessages, data]);
+        (data: { username: string; message: string }) => {
+          const newMessage: Message = {
+            from: data.username,
+            message: data.message,
+          };
+          setMessages(prevMessages => [...prevMessages, newMessage]);
         }
       );
 

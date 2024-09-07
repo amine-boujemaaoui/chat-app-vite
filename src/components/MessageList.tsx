@@ -1,10 +1,6 @@
 import { useRef, useEffect } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
-interface Message {
-  from: string;
-  message: string;
-}
+import { Message } from "@/types/Message";
 
 interface MessageListProps {
   messages: Array<Message>;
