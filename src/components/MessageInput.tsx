@@ -20,6 +20,12 @@ const MessageInput = ({
         value={message}
         onChange={e => setMessage(e.target.value)}
         className='flex-1'
+        onKeyDown={e => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            sendMessage();
+          }
+        }}
       />
       <Button onClick={sendMessage}>Envoyer</Button>
     </div>

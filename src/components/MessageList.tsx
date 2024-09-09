@@ -17,25 +17,30 @@ const MessageList = ({ messages, username }: MessageListProps) => {
   }, [messages]);
 
   return (
-    <div className='w-[500px] mx-auto mt-10'>
-      <h2 className='text-xl font-bold mb-4'>
-        {username ? `Connecté en tant que: ${username}` : "Chat privé"}
-      </h2>
-      <ScrollArea className='h-[300px] border rounded mb-4 p-4'>
-        {messages.length > 0 ? (
-          <>
-            {messages.map((msg, index) => (
-              <div key={index} className='mb-2'>
-                <strong>{msg.from}:</strong> {msg.message}
+    <ScrollArea className='h-[300px] border rounded mb-4 p-4'>
+      {messages.length > 0 ? (
+        <>
+          {messages.map((msg, index) => (
+            <div
+              key={index}
+              className={`mb-2 max-w-[417px] break-words flex ${
+                msg.from === username ? "justify-end" : "justify-start"
+              }`}>
+              <div
+                className={`p-2 rounded-lg text-left ${
+                  msg.from === username ? "bg-blue-100" : "bg-gray-100"
+                }`}>
+                {msg.from !== username && <strong>{msg.from}:</strong>}{" "}
+                {msg.message}
               </div>
-            ))}
-            <div ref={messagesEndRef}></div>
-          </>
-        ) : (
-          <p className='text-gray-500'>Aucun message pour le moment.</p>
-        )}
-      </ScrollArea>
-    </div>
+            </div>
+          ))}
+          <div ref={messagesEndRef}></div>
+        </>
+      ) : (
+        <p className='text-gray-500'>Aucun message pour le moment.</p>
+      )}
+    </ScrollArea>
   );
 };
 

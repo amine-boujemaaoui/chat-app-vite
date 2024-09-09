@@ -1,0 +1,116 @@
+import { Message } from "@/types/Message";
+import { User } from "@/types/User";
+import { useEffect, useState } from "react";
+import { io, Socket } from "socket.io-client";
+
+const useChatSocket = (roomName?: string, friendId?: string) => {
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [username, setUsername] = useState<string | null>(null);
+  const [friendUsername, setFriendUsername] = useState<string | null>(null);
+  const [users, setUsers] = useState<Array<User>>([]);
+  const [friends, setFriends] = useState<Array<User>>([]);
+  const [messages, setMessages] = useState<Array<Message>>([]);
+  const token = localStorage.getItem("jwt");
+
+  useEffect(() => {
+    if (token) {
+      const newSocket = io("http://localhost:3000", {
+        auth: { token },
+      });
+
+      setSocket(newSocket);
+
+      if (roomName) {
+        newSocket.emit("joinPrivateChat", { friendId, token });
+      } else {
+        newSocket.emit("join", token);
+      }
+
+      newSocket.on("userInfo", (data: { username: string }) => {
+        setUsername(data.username);
+      });
+
+      if (roomName) {
+        newSocket.on(
+          "privateUserInfo",
+          (data: { username: string; friendUsername: string }) => {
+            setUsername(data.username);
+            setFriendUsername(data.friendUsername);
+          }
+        );
+      }
+
+      newSocket.on(
+        "oldMessages",
+        (oldMessages: Array<{ username: string; message: string }>) => {
+          setMessages(
+            oldMessages.map((msg: { username: string; message: string }) => ({
+              from: msg.username,
+              message: msg.message,
+            }))
+          );
+        }
+      );
+
+      newSocket.on(
+        "oldPrivateMessages",
+        (oldMessages: Array<{ username: string; message: string }>) => {
+          setMessages(
+            oldMessages.map((msg: { username: string; message: string }) => ({
+              from: msg.username,
+              message: msg.message,
+            }))
+          );
+        }
+      );
+
+      newSocket.on("newMessage", (msg: Message) => {
+        setMessages((prevMessages: Array<Message>) => [...prevMessages, msg]);
+      });
+
+      newSocket.on("newPrivateMessage", (msg: Message) => {
+        setMessages((prevMessages: Array<Message>) => [...prevMessages, msg]);
+      });
+
+      newSocket.on("userList", (userList: Array<User>) => {
+        setUsers(userList);
+      });
+
+      newSocket.on("friendsList", (friendsList: Array<User>) => {
+        setFriends(friendsList);
+      });
+
+      return () => {
+        newSocket.disconnect();
+      };
+    }
+  }, [token, roomName, friendId]);
+
+  const sendMessage = (message: string, to?: string) => {
+    // Vérifiez que le username est défini avant d'envoyer le message
+    if (!username) {
+      console.error("Le username n'est pas encore défini.");
+      return;
+    }
+
+    if (message.trim() && socket && username) {
+      if (roomName) {
+        socket.emit("sendPrivateMessage", { message, to, from: username });
+      } else {
+        socket.emit("sendMessage", { message, from: username });
+      }
+    }
+  };
+
+  return {
+    socket,
+    username,
+    friendUsername,
+    users,
+    friends,
+    messages,
+    sendMessage,
+  };
+};
+
+export default useChatSocket;

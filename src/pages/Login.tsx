@@ -31,11 +31,15 @@ const Login = () => {
 
       if (response.ok) {
         const data = await response.json();
-        const token = data.token;
+        console.log(data);
 
-        // Stocker le token JWT dans le localStorage
+        const { token, userId } = data; // Récupérer le token et userId de la réponse
+
+        // Stocker le token JWT et userId dans le localStorage
         localStorage.setItem("jwt", token);
+        localStorage.setItem("userId", userId);
 
+        // Redirection vers la page du chat
         navigate("/chat");
       } else {
         setError("Identifiants incorrects");
