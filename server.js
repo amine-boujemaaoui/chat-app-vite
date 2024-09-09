@@ -80,8 +80,8 @@ app.post("/login", async (req, res) => {
       return res.status(400).json({ message: "Mot de passe incorrect" });
     }
 
-      const token = jwt.sign({ id: user.id }, "secretkey", { expiresIn: "1h" });
-      console.log(`Utilisateur connecté: (${user.id}) ${user.username}`);
+    const token = jwt.sign({ id: user.id }, "secretkey", { expiresIn: "1h" });
+    console.log(`Utilisateur connecté: (${user.id}) ${user.username}`);
 
     res.json({ token, userId: user.id });
   } catch (error) {
@@ -179,27 +179,41 @@ io.on("connection", socket => {
         connectedUsers[userId] = socket.id;
         socket.userId = userId;
 
-        // Envoyer les anciens messages de la salle 'global' uniquement à l'utilisateur qui vient de se connecter
-        const query = `SELECT u.username, m.message, m.created_at FROM messages m
-                       JOIN users u ON m.from_user_id = u.id
-                       WHERE m.room_name = 'global'
-                       ORDER BY m.created_at ASC`;
-        const [messages] = await db.query(query);
-        socket.emit("oldMessages", messages);
-
+        // Mettre à jour le statut de l'utilisateur en ligne
         const updateQuery = `UPDATE users SET is_online = 1 WHERE id = ?`;
         await db.query(updateQuery, [userId]);
 
-        // Récupérer le username de l'utilisateur connecté
+        // Récupérer et envoyer les anciens messages globaux
+        const query = `SELECT u.username, m.message, m.created_at FROM messages m
+                     JOIN users u ON m.from_user_id = u.id
+                     WHERE m.room_name = 'global'
+                     ORDER BY m.created_at ASC`;
+        const [messages] = await db.query(query);
+        socket.emit("oldMessages", messages);
+
+        // Envoyer les informations d'utilisateur et la liste des utilisateurs
         const userInfoQuery = `SELECT id, username FROM users WHERE id = ?`;
         const [userInfo] = await db.query(userInfoQuery, [userId]);
 
-        const friendsQuery = `SELECT id, username, is_online FROM users WHERE id IN (SELECT friend_id FROM friends WHERE user_id = ? ORDER BY is_online DESC, username ASC)`;
-        const [friendsList] = await db.query(friendsQuery, [userId]);
+        const userListQuery = `SELECT id, username, is_online FROM users`;
+        const [userList] = await db.query(userListQuery);
+        io.emit("userList", userList);
 
-        // Envoyer la liste des amis uniquement à l'utilisateur qui vient de se connecter
-        console.log(`Statut mis à jour pour l'utilisateur ${userId}: en ligne`);
+        // Envoyer la liste des amis à l'utilisateur
+        const friendsQuery = `SELECT id, username, is_online FROM users WHERE id IN (SELECT friend_id FROM friends WHERE user_id = ?)`;
+        const [friendsList] = await db.query(friendsQuery, [userId]);
         socket.emit("friendsList", friendsList);
+
+        // Mettre à jour les amis de l'utilisateur connecté
+        friendsList.forEach(async friend => {
+          const friendSocketId = connectedUsers[friend.id];
+          if (friendSocketId) {
+            const [updatedFriendsList] = await db.query(friendsQuery, [
+              friend.id,
+            ]);
+            io.to(friendSocketId).emit("friendsList", updatedFriendsList);
+          }
+        });
 
         if (userInfo.length > 0) {
           const user = userInfo[0];
@@ -209,11 +223,6 @@ io.on("connection", socket => {
           // Envoyer les informations d'utilisateur uniquement à l'utilisateur actuel
           socket.emit("userInfo", { username: socket.username });
           console.log("Envoi des informations de l'utilisateur");
-
-          // Envoyer la liste des utilisateurs connectés à tous les utilisateurs (ceci est global)
-          const userListQuery = `SELECT id, username, is_online FROM users ORDER BY is_online DESC, username ASC`;
-          const [results] = await db.query(userListQuery);
-          io.emit("userList", results); // Ceci envoie la liste des utilisateurs à tous les utilisateurs
         }
       } catch (error) {
         console.error("Erreur d'authentification:", error);
@@ -227,9 +236,26 @@ io.on("connection", socket => {
       const userId = decoded.id;
       socket.userId = userId;
 
+      // Mettre à jour le statut de l'utilisateur en ligne
       const updateQuery = `UPDATE users SET is_online = 1 WHERE id = ?`;
       await db.query(updateQuery, [userId]);
 
+      // Récupérer la liste des amis de l'utilisateur connecté
+      const friendsQuery = `SELECT id, username, is_online FROM users WHERE id IN (SELECT friend_id FROM friends WHERE user_id = ?)`;
+      const [friendsList] = await db.query(friendsQuery, [userId]);
+
+      // Envoyer la liste mise à jour des amis pour chaque ami
+      friendsList.forEach(async friend => {
+        const friendSocketId = connectedUsers[friend.id];
+        if (friendSocketId) {
+          const [updatedFriendsList] = await db.query(friendsQuery, [
+            friend.id,
+          ]);
+          io.to(friendSocketId).emit("friendsList", updatedFriendsList);
+        }
+      });
+
+      // Rejoindre la salle privée
       const roomName = [userId, friendId].sort().join("_");
       const query = `SELECT u.username, m.message, m.created_at FROM messages m
                JOIN users u ON m.from_user_id = u.id
@@ -239,21 +265,15 @@ io.on("connection", socket => {
       socket.emit("oldPrivateMessages", messages);
       socket.join(roomName);
 
-      // Récupérer le nom d'utilisateur de l'utilisateur connecté
+      // Récupérer les informations utilisateur et ami
       const userInfoQuery = `SELECT id, username FROM users WHERE id = ?`;
       const [userInfo] = await db.query(userInfoQuery, [userId]);
 
-      // Récupérer le nom d'utilisateur de l'ami
       const friendInfoQuery = `SELECT id, username FROM users WHERE id = ?`;
       const [friendInfo] = await db.query(friendInfoQuery, [friendId]);
 
-      const friendsQuery = `SELECT id, username, is_online FROM users WHERE id IN (SELECT friend_id FROM friends WHERE user_id = ? ORDER BY is_online DESC, username ASC)`;
-      const [friendsList] = await db.query(friendsQuery, [userId]);
+      // Envoyer la liste des amis à l'utilisateur
       socket.emit("friendsList", friendsList);
-
-      const userListQuery = `SELECT id, username, is_online FROM users ORDER BY is_online DESC, username ASC`;
-      const [userList] = await db.query(userListQuery);
-      io.emit("userList", userList);
 
       if (userInfo.length > 0 && friendInfo.length > 0) {
         const user = userInfo[0];
@@ -273,7 +293,6 @@ io.on("connection", socket => {
           friendUsername: friend.username, // Nom d'utilisateur de l'ami
         });
 
-        console.log("Envoi des informations de l'utilisateur et de l'ami");
         console.log(
           `Utilisateur ${socket.username} a rejoint la salle privée ${roomName} avec ${friend.username}`
         );
@@ -369,10 +388,31 @@ io.on("connection", socket => {
           `Statut mis à jour pour l'utilisateur ${userId}: hors ligne`
         );
 
+        // Mettre à jour la liste des utilisateurs globaux
         delete connectedUsers[userId];
-        const query = `SELECT id, username, is_online FROM users ORDER BY is_online DESC, username ASC`;
+        const query = `SELECT id, username, is_online FROM users`;
         const [results] = await db.query(query);
         io.emit("userList", results);
+
+        // Récupérer la liste des amis de l'utilisateur déconnecté
+        const friendsQuery = `
+        SELECT u.id, u.username, u.is_online 
+        FROM friends f
+        JOIN users u ON u.id = f.friend_id
+        WHERE f.user_id = ?
+      `;
+        const [friendsList] = await db.query(friendsQuery, [userId]);
+
+        // Envoyer la liste mise à jour des amis pour chaque ami
+        friendsList.forEach(async friend => {
+          const friendSocketId = connectedUsers[friend.id];
+          if (friendSocketId) {
+            const [updatedFriendsList] = await db.query(friendsQuery, [
+              friend.id,
+            ]);
+            io.to(friendSocketId).emit("friendsList", updatedFriendsList);
+          }
+        });
       } catch (err) {
         console.error(
           "Erreur lors de la mise à jour du statut hors ligne:",

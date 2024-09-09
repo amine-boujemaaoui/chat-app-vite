@@ -13,6 +13,13 @@ const useChatSocket = (roomName?: string, friendId?: string) => {
   const [privateMessages, setPrivateMessages] = useState<Array<Message>>([]); // Nouvel état pour les messages privés
   const token = localStorage.getItem("jwt");
 
+  const sortUsers = (a: User, b: User) => {
+    if (a.is_online !== b.is_online) {
+      return a.is_online === b.is_online ? 0 : a.is_online ? -1 : 1;
+    }
+    return a.username.localeCompare(b.username);
+  };
+
   useEffect(() => {
     if (token) {
       const newSocket = io("http://localhost:3000", {
@@ -80,11 +87,11 @@ const useChatSocket = (roomName?: string, friendId?: string) => {
       });
 
       newSocket.on("userList", (userList: Array<User>) => {
-        setUsers(userList);
+        setUsers(userList.sort(sortUsers));
       });
 
       newSocket.on("friendsList", (friendsList: Array<User>) => {
-        setFriends(friendsList);
+        setFriends(friendsList.sort(sortUsers));
       });
 
       return () => {

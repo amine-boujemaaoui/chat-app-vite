@@ -1,17 +1,12 @@
-import {
-  Card,
-  CardHeader,
-  CardContent,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import UserList from "@/components/UserList";
 import FriendList from "@/components/FriendList";
 import MessageInput from "@/components/MessageInput";
 import MessageList from "@/components/MessageList";
 import { Message } from "@/types/Message";
 import { User } from "@/types/User";
+import TabContent from "@/components/TabContent";
 
 interface ChatLayoutProps {
   username: string | null;
@@ -23,6 +18,8 @@ interface ChatLayoutProps {
   sendMessage: () => void;
   friendUsername?: string | null;
 }
+
+// Composant générique pour afficher une liste dans une carte
 
 const ChatLayout = ({
   username,
@@ -55,7 +52,7 @@ const ChatLayout = ({
               )}
             </CardTitle>
           </CardHeader>
-          <CardContent className='space-y-2'>
+          <CardContent className='space-y-2 pb-0'>
             <MessageList messages={messages} username={username} />
             <MessageInput
               message={message}
@@ -64,6 +61,7 @@ const ChatLayout = ({
             />
           </CardContent>
         </Card>
+
         <Tabs defaultValue='users' className='w-[300px]'>
           <TabsList className='grid w-full grid-cols-2 bg-zinc-50'>
             <TabsTrigger value='users' className='mx-1'>
@@ -73,30 +71,21 @@ const ChatLayout = ({
               Friends
             </TabsTrigger>
           </TabsList>
-          <TabsContent value='users'>
-            <Card>
-              <CardHeader>
-                <CardDescription>
-                  Liste des users connectés.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className='space-y-2'>
-                <UserList users={users} username={username} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-          <TabsContent value='friends'>
-            <Card>
-              <CardHeader>
-                <CardDescription>
-                  Liste des amis connectés.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className='space-y-2'>
-                <FriendList friends={friends} username={username} />
-              </CardContent>
-            </Card>
-          </TabsContent>
+
+          {/* Utilisation de TabContent pour factoriser les sections des utilisateurs et des amis */}
+          <TabContent
+            value='users'
+            triggerText='Users'
+            description='Liste des users connectés.'>
+            <UserList users={users} username={username} />
+          </TabContent>
+
+          <TabContent
+            value='friends'
+            triggerText='Friends'
+            description='Liste des amis connectés.'>
+            <FriendList friends={friends} username={username} />
+          </TabContent>
         </Tabs>
       </div>
     </div>
