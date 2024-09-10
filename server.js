@@ -220,7 +220,6 @@ io.on("connection", socket => {
           console.log(`Utilisateur connecté: ${user.username}`);
           socket.username = user.username;
 
-          // Envoyer les informations d'utilisateur uniquement à l'utilisateur actuel
           socket.emit("userInfo", { username: socket.username });
           console.log("Envoi des informations de l'utilisateur");
         }

@@ -18,4 +18,5 @@ EXPOSE 3000
 
 # Démarrer l'application en fonction de l'environnement
 # Utilise nodemon en développement et node en production
-CMD ["sh", "-c", "if [ \"$NODE_ENV\" = \"production\" ]; then node server.js; else npx nodemon server.js; fi"]
+CMD ["sh", "-c", "if [ \"$NODE_ENV\" = \"production\" ]; then node server.js; else npx nodemon --legacy-watch server.js; fi"]
+
