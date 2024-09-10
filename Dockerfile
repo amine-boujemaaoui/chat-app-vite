@@ -1,20 +1,21 @@
-# Utilise une image officielle de Node.js
+# Utiliser une image Node.js de base
 FROM node:18
 
-# Définit le répertoire de travail dans le conteneur
+# Créer un répertoire de travail
 WORKDIR /usr/src/app
 
-# Copie les fichiers package.json et package-lock.json dans le conteneur
+# Copier les fichiers package.json et package-lock.json
 COPY package*.json ./
 
-# Installe les dépendances du projet
+# Installer toutes les dépendances, y compris les dépendances de développement
 RUN npm install
 
-# Copie tout le code source dans le conteneur
+# Copier le reste de l'application
 COPY . .
 
-# Expose le port 3000 pour permettre l'accès à l'application
+# Exposer le port que l'application utilise
 EXPOSE 3000
 
-# Commande pour démarrer l'application
-CMD ["node", "server.js"]
+# Démarrer l'application en fonction de l'environnement
+# Utilise nodemon en développement et node en production
+CMD ["sh", "-c", "if [ \"$NODE_ENV\" = \"production\" ]; then node server.js; else npx nodemon server.js; fi"]

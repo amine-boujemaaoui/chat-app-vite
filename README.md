@@ -1,50 +1,102 @@
-# React + TypeScript + Vite
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+# Chat Application
 
-Currently, two official plugins are available:
+## Description
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Ce projet est une application de chat en temps réel développée avec **Node.js**, **Express**, et une base de données **MySQL**. L'application est contenue dans des conteneurs Docker, ce qui permet une configuration et un déploiement simplifiés. Le projet utilise **Nodemon** pour surveiller les changements en développement et redémarrer automatiquement le serveur.
 
-## Expanding the ESLint configuration
+## Pré-requis
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+Assurez-vous d'avoir installé les outils suivants sur votre machine :
 
-- Configure the top-level `parserOptions` property like this:
+- **Docker** et **Docker Compose**
+- **Node.js** (version 18 ou plus récente)
+- **npm** (normalement installé avec Node.js)
 
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+## Installation et configuration
+
+### 1. Cloner le projet
+
+```bash
+git clone https://github.com/amine-boujemaaoui/chat-app-vite.git
+cd chat-app-vite
 ```
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
+### 2. Configuration avec Docker
 
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
+Le projet utilise Docker pour isoler l'application et la base de données MySQL. Suivez les étapes ci-dessous pour configurer votre environnement de développement.
 
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
+#### Démarrer les conteneurs avec Docker Compose
+
+```bash
+docker-compose up --build
 ```
+
+Cela construira et démarrera les conteneurs pour l'application Node.js et MySQL. Une fois terminé, vous devriez avoir deux conteneurs en cours d'exécution :
+- **node_app** pour l'application Node.js
+- **mysql_container** pour la base de données MySQL
+
+#### Accéder à la base de données MySQL
+
+Pour interagir avec la base de données MySQL à l'intérieur du conteneur, utilisez la commande suivante :
+
+```bash
+docker exec -it mysql_container mysql -u chat_user -p
+```
+
+Lorsque vous y êtes invité, entrez le mot de passe configuré dans `docker-compose.yml` (par défaut : `chat_password`).
+
+### 3. Utilisation de l'application en mode développement
+
+Si vous préférez travailler en dehors de Docker pour le développement de l'application Node.js, suivez ces étapes pour exécuter l'application localement avec **Nodemon**.
+
+#### Installer les dépendances
+
+```bash
+npm install
+```
+
+#### Démarrer l'application en mode développement
+
+```bash
+npm run dev
+```
+
+Cette commande démarre le serveur avec **Nodemon**, qui redémarre automatiquement l'application à chaque changement de fichier.
+
+### 4. Variables d'environnement
+
+Si vous avez besoin de configurer des variables d'environnement supplémentaires, vous pouvez les ajouter dans un fichier `.env` à la racine du projet ou directement dans `docker-compose.yml` sous la section `environment`.
+
+### 5. Accès à l'application
+
+Une fois les conteneurs démarrés, l'application sera disponible sur le port `5173` de votre machine locale :
+
+```
+http://localhost:5173/
+```
+
+### 6. Arrêter les conteneurs
+
+Pour arrêter tous les conteneurs Docker, exécutez :
+
+```bash
+docker-compose down
+```
+
+## Structure du projet
+
+- **/src** : Contient le code source de l'application.
+- **/docker-compose.yml** : Configuration des services Docker (Node.js et MySQL).
+- **/Dockerfile** : Instructions de construction pour le conteneur Node.js.
+
+## Commandes utiles
+
+- **Démarrer l'application avec Docker** : `docker-compose up --build`
+- **Accéder à la base de données MySQL dans Docker** : `docker exec -it mysql_container mysql -u chat_user -p`
+- **Démarrer l'application en mode développement** : `npm run dev`
+- **Arrêter les conteneurs Docker** : `docker-compose down`
+
+## Contributeurs
+
+- Amine BOUJEMAAOUI (amine.boujemaaoui.1@gmail.com)
