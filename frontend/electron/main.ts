@@ -72,7 +72,6 @@ app.on("activate", () => {
 });
 
 app.whenReady().then(() => {
-  // Example: Creating windows for two different clients
   createWindow("client1"); // Client 1
-  createWindow("client2"); // Client 2
+  // createWindow("client2");  Client 2 for testing
 });
