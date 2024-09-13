@@ -5,12 +5,15 @@ import mysql from "mysql2/promise";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import cors from "cors";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "*",
+    origin: process.env.CORS_ORIGIN || "*",
     methods: ["GET", "POST"],
   },
 });
@@ -19,13 +22,15 @@ app.use(express.json());
 app.use(cors());
 
 async function connectToDatabase(retries = 5) {
+  console.log("Connexion à MySQL...");
+
   while (retries) {
     try {
       const db = await mysql.createConnection({
-        host: "mysql",
-        user: "chat_user",
-        password: "chat_password",
-        database: "chat_db",
+        host: process.env.MYSQL_HOST,
+        user: process.env.MYSQL_USER,
+        password: process.env.MYSQL_PASSWORD,
+        database: process.env.MYSQL_DATABASE,
       });
       return db;
     } catch (err) {
@@ -80,7 +85,9 @@ app.post("/login", async (req, res) => {
       return res.status(400).json({ message: "Mot de passe incorrect" });
     }
 
-    const token = jwt.sign({ id: user.id }, "secretkey", { expiresIn: "1h" });
+    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
+      expiresIn: "1h",
+    });
     console.log(`Utilisateur connecté: (${user.id}) ${user.username}`);
 
     res.json({ token, userId: user.id });
@@ -94,7 +101,7 @@ app.post("/add-friend", async (req, res) => {
   const { friendId } = req.body;
   const token = req.headers.authorization.split(" ")[1];
 
-  jwt.verify(token, "secretkey", async (err, decoded) => {
+  jwt.verify(token, process.env.JWT_SECRET, async (err, decoded) => {
     if (err) {
       return res.status(403).json({ message: "Token invalide" });
     }
@@ -139,7 +146,7 @@ function authenticateToken(req, res, next) {
     return res.status(401).json({ message: "Token manquant" });
   }
 
-  jwt.verify(token, "secretkey", (err, user) => {
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
     if (err) {
       console.error("Erreur de vérification du token:", err);
       return res.status(403).json({ message: "Token invalide" });
@@ -174,7 +181,7 @@ io.on("connection", socket => {
       // Assurez-vous qu'il ne rejoint qu'une seule fois
       socket.joined = true;
       try {
-        const decoded = jwt.verify(token, "secretkey");
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const userId = decoded.id;
         connectedUsers[userId] = socket.id;
         socket.userId = userId;
@@ -231,7 +238,7 @@ io.on("connection", socket => {
 
   socket.on("joinPrivateChat", async ({ friendId, token }) => {
     try {
-      const decoded = jwt.verify(token, "secretkey");
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
       const userId = decoded.id;
       socket.userId = userId;
 
@@ -343,7 +350,7 @@ io.on("connection", socket => {
 
   socket.on("friendRequest", async ({ token, friendId }) => {
     try {
-      const decoded = jwt.verify(token, "secretkey");
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
       const userId = decoded.id;
 
       // Envoie une notification à l'utilisateur
@@ -362,10 +369,9 @@ io.on("connection", socket => {
 
   socket.on("friendRequestAccepted", async ({ token, friendId }) => {
     try {
-      const decoded = jwt.verify(token, "secretkey");
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
       const userId = decoded.id;
 
-      // Notifie les deux utilisateurs que la demande a été acceptée
       io.to(socket.id).emit("friendAccepted", { friendId });
     } catch (error) {
       console.error("Erreur lors de l'acceptation de la demande d'ami:", error);
