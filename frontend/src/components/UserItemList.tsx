@@ -1,5 +1,5 @@
-import { User } from "@/types/User";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { User } from "../types/User";
+import { ScrollArea } from "../components/ui/scroll-area";
 
 interface UserItemListProps {
   users: Array<User>;

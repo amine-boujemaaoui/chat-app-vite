@@ -1,12 +1,19 @@
-import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import UserList from "@/components/UserList";
-import FriendList from "@/components/FriendList";
-import MessageInput from "@/components/MessageInput";
-import MessageList from "@/components/MessageList";
-import { Message } from "@/types/Message";
-import { User } from "@/types/User";
-import TabContent from "@/components/TabContent";
+import {
+  Card,
+  CardHeader,
+  CardContent,
+  CardTitle,
+} from "../components/ui/card";
+import { Tabs, TabsList, TabsTrigger } from "../components/ui/tabs";
+import UserList from "../components/UserList";
+import FriendList from "../components/FriendList";
+import MessageInput from "../components/MessageInput";
+import MessageList from "../components/MessageList";
+import { Message } from "../types/Message";
+import { User } from "../types/User";
+import TabContent from "../components/TabContent";
+import { ChevronLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface ChatLayoutProps {
   username: string | null;
@@ -31,24 +38,26 @@ const ChatLayout = ({
   sendMessage,
   friendUsername,
 }: ChatLayoutProps) => {
+  const navigate = useNavigate();
+
   return (
     <div className='flex h-screen'>
       <div className='mx-auto my-auto flex flex-row'>
-        <Card className='mx-4 w-[500px]'>
+        <Card className='mx-4 w-[500px] ml-0'>
           <CardHeader>
-            <CardTitle className='text-3xl font-normal text-gray-500'>
+            <CardTitle className='text-2xl font-normal text-gray-500 flex items-center'>
               {friendUsername ? (
                 <>
-                  Conversation privée avec{" "}
+                  <ChevronLeft onClick={() => navigate("/chat")} className="mr-2 text-black hover:-translate-x-1 duration-200" />
+                  <span className='font-semibold text-black'>
+                    {username}
+                  </span>{" - "}
                   <span className='font-semibold text-black'>
                     {friendUsername}
                   </span>
                 </>
               ) : (
-                <>
-                  Connécté en tant que{" "}
-                  <span className='font-semibold text-black'>{username}</span>
-                </>
+                <span className='font-semibold text-black'>{username}</span>
               )}
             </CardTitle>
           </CardHeader>

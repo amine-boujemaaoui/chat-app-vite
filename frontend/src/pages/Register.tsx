@@ -63,7 +63,7 @@ const Register = () => {
 
   return (
     <div className='flex justify-center items-center min-h-screen bg-gray-100'>
-      <Card className='w-[350px] mx-auto mt-10'>
+      <Card className='w-[350px] mx-auto'>
         <CardHeader>
           <CardTitle className='text-2xl font-bold'>Inscription</CardTitle>
           <CardDescription>
