@@ -3,14 +3,26 @@
 
 ## Description
 
-Ce projet est une application de chat en temps réel développée avec **Node.js**, **Express**, et une base de données **MySQL**. L'application est contenue dans des conteneurs Docker, ce qui permet une configuration et un déploiement simplifiés. Le projet utilise **Nodemon** pour surveiller les changements en développement et redémarrer automatiquement le serveur.
+Ce projet est une application de chat en temps réel utilisant **Node.js** pour le backend, **React** avec **Vite.js** pour le frontend, et **MySQL** pour la base de données. L'application est conteneurisée avec **Docker** pour faciliter la configuration et le déploiement.
+
+
+### Technologies utilisées
+
+- **Node.js** : Utilisé pour le backend, avec Express pour gérer les routes et les API.
+- **Express** : Framework pour Node.js facilitant la création d'applications web et d'API.
+- **Socket.io** : Bibliothèque permettant une communication en temps réel bidirectionnelle entre le serveur et les clients.
+- **MySQL** : Base de données relationnelle utilisée pour stocker les utilisateurs, les messages, et les relations d'amitié.
+- **React (Vite.js)** : Framework pour le frontend, avec Vite.js.js pour la gestion du développement et du build. Vite.js fournit également le Hot Module Replacement (HMR) pour un développement rapide.
+- **Docker** : Utilisé pour isoler les différentes parties de l'application (frontend, backend, et base de données) dans des conteneurs, facilitant ainsi le déploiement et le développement.
+- **Nodemon** : Utilisé en développement pour redémarrer automatiquement le serveur Node.js à chaque modification de fichier.
+- **JWT (JSON Web Tokens)** : Utilisé pour gérer l'authentification et la sécurité des utilisateurs.
+- **bcrypt.js** : Utilisé pour le hachage des mots de passe des utilisateurs afin de garantir la sécurité.
 
 ## Pré-requis
 
 Assurez-vous d'avoir installé les outils suivants sur votre machine :
 
 - **Docker** et **Docker Compose**
-- **Node.js** (version 18 ou plus récente)
 - **npm** (normalement installé avec Node.js)
 
 ## Installation et configuration
@@ -24,7 +36,7 @@ cd chat-app-vite
 
 ### 2. Configuration avec Docker
 
-Le projet utilise Docker pour isoler l'application et la base de données MySQL. Suivez les étapes ci-dessous pour configurer votre environnement de développement.
+Le projet utilise Docker pour isoler l'application, le serveur et la base de données MySQL. Suivez les étapes ci-dessous pour configurer votre environnement de développement.
 
 #### Démarrer les conteneurs avec Docker Compose
 
@@ -32,16 +44,17 @@ Le projet utilise Docker pour isoler l'application et la base de données MySQL.
 docker-compose up --build
 ```
 
-Cela construira et démarrera les conteneurs pour l'application Node.js et MySQL. Une fois terminé, vous devriez avoir deux conteneurs en cours d'exécution :
-- **node_app** pour l'application Node.js
-- **mysql_container** pour la base de données MySQL
+Cela construira et démarrera les conteneurs pour l'application Node.js, le site React (Vite.js) et MySQL. Une fois terminé, vous devriez avoir trois conteneurs en cours d'exécution :
+- **chat_frontend** pour l'application React (Vite.js)
+- **chat_backend** pour l'application Node.js
+- **chat_mysql** pour la base de données MySQL
 
 #### Accéder à la base de données MySQL
 
 Pour interagir avec la base de données MySQL à l'intérieur du conteneur, utilisez la commande suivante :
 
 ```bash
-docker exec -it mysql_container mysql -u chat_user -p
+docker exec -it chat_mysql mysql -u chat_user -p
 ```
 
 Lorsque vous y êtes invité, entrez le mot de passe configuré dans `docker-compose.yml` (par défaut : `chat_password`).
@@ -86,9 +99,10 @@ docker-compose down
 
 ## Structure du projet
 
-- **/src** : Contient le code source de l'application.
-- **/docker-compose.yml** : Configuration des services Docker (Node.js et MySQL).
-- **/Dockerfile** : Instructions de construction pour le conteneur Node.js.
+- **/frontend** : Contient le code source de l'application frontend React (Vite.js).
+- **/backend** : Contient le code source de l'application backend Node.js.
+- **/database** : Contient le code source pour la génération de la base de données.
+- **/docker-compose.yml** : Configuration des services Docker (Node.js, React et MySQL).
 
 ## Commandes utiles
 
