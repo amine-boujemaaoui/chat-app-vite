@@ -1,2 +1,2 @@
-// utils/connectedUsers.js
+// utils/connectedUsers.ts
 export const connectedUsers = {};

@@ -1,4 +1,4 @@
-// middleware/authenticateToken.js
+// middleware/authenticateToken.ts
 import jwt from "jsonwebtoken";
 
 export function authenticateToken(req, res, next) {
@@ -8,13 +8,15 @@ export function authenticateToken(req, res, next) {
   const token = authHeader && authHeader.split(" ")[1];
 
   if (!token) {
-    return res.status(401).json({ message: "Token manquant" });
+    res.status(401).json({ message: "Token manquant" });
+    return;
   }
 
   jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
     if (err) {
       console.error("Erreur de vérification du token:", err);
-      return res.status(403).json({ message: "Token invalide" });
+      res.status(403).json({ message: "Token invalide" });
+      return;
     }
     req.user = user; // On attache l'utilisateur décodé à la requête
     next(); // On passe au middleware ou route suivant

@@ -1,4 +1,4 @@
-// controllers/authController.js
+// controllers/authController.ts
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { getDb } from "../config/db.js";
@@ -7,6 +7,17 @@ export async function register(req, res) {
   const { username, email, password } = req.body;
   try {
     const db = getDb();
+
+    // Vérifier si l'email est déjà utilisé
+    const [existingUser] = await db.query(
+      "SELECT id FROM users WHERE email = ?",
+      [email]
+    );
+    if (existingUser.length > 0) {
+      res.status(400).json({ message: "Cet email est déjà utilisé" });
+      return;
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
     const query = `INSERT INTO users (username, email, password) VALUES (?, ?, ?)`;
     await db.query(query, [username, email, hashedPassword]);
@@ -22,16 +33,20 @@ export async function login(req, res) {
 
   try {
     const db = getDb();
-    const query = `SELECT * FROM users WHERE email = ?`;
-    const [results] = await db.query(query, [email]);
+    const [results] = await db.query(
+      "SELECT * FROM users WHERE email = ?",
+      [email]
+    );
     if (results.length === 0) {
-      return res.status(400).json({ message: "Utilisateur non trouvé" });
+      res.status(400).json({ message: "Utilisateur non trouvé" });
+      return;
     }
 
     const user = results[0];
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ message: "Mot de passe incorrect" });
+      res.status(400).json({ message: "Mot de passe incorrect" });
+      return;
     }
 
     const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {

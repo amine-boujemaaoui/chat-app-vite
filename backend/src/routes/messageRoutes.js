@@ -1,11 +1,11 @@
-// routes/messageRoutes.js
-import express from "express";
+// routes/messageRoutes.ts
+import { Router } from "express";
 import { getMessages, sendMessage } from "../controllers/messageController.js";
 import { authenticateToken } from "../middleware/authenticateToken.js";
 
-const router = express.Router();
+const router = Router();
 
-// Ajoutez vos routes de messages ici si nécessaire
+// Définissez les routes pour les messages si nécessaire
 // router.get('/', authenticateToken, getMessages);
 // router.post('/', authenticateToken, sendMessage);
 

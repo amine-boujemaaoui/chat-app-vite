@@ -1,7 +1,8 @@
-// config/db.js
+// config/db.ts
 import mysql from "mysql2/promise";
+const { Connection } = mysql;
 
-let db;
+let db = null;
 
 export async function connectToDatabase(retries = 5) {
   console.log("Connexion à MySQL...");
@@ -15,10 +16,10 @@ export async function connectToDatabase(retries = 5) {
         database: process.env.MYSQL_DATABASE,
       });
       console.log("Connecté à la base de données MySQL");
-      return db;
+      return;
     } catch (err) {
       console.log(
-        `Échec de connexion à MySQL. Tentatives restantes : ${retries}`
+        `Échec de connexion à MySQL. Tentatives restantes : ${retries - 1}`
       );
       retries -= 1;
       await new Promise(res => setTimeout(res, 5000));
@@ -30,7 +31,7 @@ export async function connectToDatabase(retries = 5) {
 export function getDb() {
   if (!db) {
     throw new Error(
-      "La base de données n'est pas connectée. Veuillez appeler connectToDatabase d'abord."
+      "La base de données n'est pas connectée. Appelez d'abord connectToDatabase()"
     );
   }
   return db;
